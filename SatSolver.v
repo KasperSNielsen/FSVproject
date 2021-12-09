@@ -165,8 +165,22 @@ Proof. induction l; intros.
     + cbn. destruct (interp a p); eauto.
 Qed.
 
+Lemma helper : forall l (v: valuation), exists v', forall x0, In x0 l -> In v' (allValuations l) /\ v x0 = v' x0.
+Proof. induction l; intros.
+  - exists Ø. intros. inversion H.
+  - destruct (IHl v) as [v'']. eexists. intros. destruct H0.
+    + subst. destruct (v x0).
+      * cbn. admit.
+      * cbn. admit.
+    + destruct (beq_id a x0) eqn:E. 
+      * admit.
+      * cbn.  apply H in H0.  split.
+        -- apply in_app_iff. left. apply in_map. destruct H0. apply H0.
+        -- unfold override. rewrite E. destruct H0. apply H1.
+Admitted.
+
 Lemma satisfiable_helper : forall p, satisfiable p -> exists v, In v (allValuations (occuring_vars p)) /\ interp v p = true.
-Proof. Admitted.
+Proof. intros. destruct H. Admitted.
 
 Lemma solver_complete : forall p, satisfiable p -> solver p = true.
 Proof. 
