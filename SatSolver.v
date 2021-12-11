@@ -159,7 +159,7 @@ Qed.
 
 Lemma solver_complete_help : forall l p v, interp v p = true -> In v l -> exists v', find_valuation_helper p l = Some v'.
 Proof. induction l; intros.
-  - exists Ø. easy.
+  - easy.
   - destruct H0.
     + subst. exists v. cbn. rewrite H. reflexivity.
     + cbn. destruct (interp a p); eauto.
@@ -168,16 +168,16 @@ Qed.
 Lemma helper : forall l (v: valuation), exists v', In v' (allValuations l) /\ forall x0, In x0 l ->  v x0 = v' x0.
 Proof. induction l; intros.
   - exists Ø. split. left. reflexivity. intros. inversion H.
-  - destruct (IHl v) as [v'']. destruct H. destruct (v a) eqn:E1. 
-    + eexists (v''|[a |-> true]|). intros. cbn. remember (fun V : valuation => V |[ a |-> true ]|) as f. assert (f v'' = (v''|[a |-> true]|)) by (rewrite Heqf; reflexivity).
+  - destruct (IHl v) as [v']. destruct H. destruct (v a) eqn:E1. 
+    + exists (v'|[a |-> true]|). cbn. remember (fun V : valuation => V |[ a |-> true ]|) as f. assert (f v' = (v'|[a |-> true]|)) by (rewrite Heqf; reflexivity).
        split.
-        * apply in_app_iff. right. rewrite <- H1. apply in_map.  auto.
+        * apply in_app_iff. right. rewrite <- H1. apply in_map. auto.
         * intros. destruct H2.
           -- subst. unfold override. rewrite <- beq_id_refl. apply E1.
           -- apply H0 in H2. destruct (beq_id a x0) eqn:E.
             ++ unfold override. rewrite E. symmetry in E. apply beq_id_eq in E. subst. assumption.
             ++ unfold override. rewrite E. apply H2.
-    + eexists (v''|[a |-> false]|). intros. cbn. remember (fun V : valuation => V |[ a |-> false ]|) as f. assert (f v'' = (v''|[a |-> false]|)) by (rewrite Heqf; reflexivity).
+    + exists (v'|[a |-> false]|). cbn. remember (fun V : valuation => V |[ a |-> false ]|) as f. assert (f v' = (v'|[a |-> false]|)) by (rewrite Heqf; reflexivity).
     split.
       * apply in_app_iff. left. rewrite <- H1. apply in_map.  auto.
       * intros. destruct H2.
@@ -219,10 +219,12 @@ Qed.
     
 Lemma satisfiable_helper : forall p, satisfiable p -> exists v, In v (allValuations (occuring_vars p)) /\ interp v p = true.
 Proof. intros. destruct H as [v]. destruct (helper (occuring_vars p) v) as [v']. destruct H0. exists v'.
-  split. auto. clear H0. rewrite <- H. clear H. induction p; cbn;
-  try reflexivity; try (rewrite <- H1; auto; left; auto);
-  try (rewrite IHp1, IHp2; try reflexivity; intros; apply H1; cbn; [ apply in_set_union_r |  apply in_set_union_l]; auto).
-  rewrite IHp. reflexivity. intros. auto.
+  split.
+    - apply H0.
+    - clear H0. rewrite <- H. clear H. induction p; cbn;
+      try reflexivity; try (rewrite <- H1; auto; left; auto);
+      try (rewrite IHp1, IHp2; try reflexivity; intros; apply H1; cbn; [ apply in_set_union_r |  apply in_set_union_l]; auto);
+      (rewrite IHp; auto).
 Qed.
 
 Lemma solver_complete : forall p, satisfiable p -> solver p = true.
