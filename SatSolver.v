@@ -168,16 +168,38 @@ Qed.
 Lemma helper : forall l (v: valuation), exists v', forall x0, In x0 l -> In v' (allValuations l) /\ v x0 = v' x0.
 Proof. induction l; intros.
   - exists Ø. intros. inversion H.
-  - destruct (IHl v) as [v'']. eexists. intros. destruct H0.
-    + subst. destruct (v x0).
-      * cbn. admit.
-      * cbn. admit.
-    + destruct (beq_id a x0) eqn:E. 
-      * admit.
-      * cbn.  apply H in H0.  split.
-        -- apply in_app_iff. left. apply in_map. destruct H0. apply H0.
-        -- unfold override. rewrite E. destruct H0. apply H1.
-Admitted.
+  - destruct (IHl v) as [v'']. destruct (v a) eqn:E1, l. 
+    + exists (Ø|[a |-> true]|). intros. destruct H0.
+      * split.
+        -- cbn. auto.
+        -- unfold override. subst. rewrite <- beq_id_refl. apply E1.
+      * inversion H0. 
+    + eexists (v''|[a |-> true]|). intros. remember (i :: l) as l'. cbn. remember (fun V : valuation => V |[ a |-> true ]|) as f. assert (f v'' = (v''|[a |-> true]|)) by (rewrite Heqf; reflexivity).
+     destruct H0.
+      * split.
+        -- apply in_app_iff. right. rewrite <- H1. apply in_map. destruct (H i). rewrite Heql'. left. reflexivity. auto.
+        -- subst. unfold override. rewrite <- beq_id_refl. apply E1.
+      * apply H in H0. destruct H0. split.
+        -- apply in_app_iff. right. rewrite <- H1. apply in_map. assumption.
+        -- destruct (beq_id a x0) eqn:E.
+          ++ unfold override. rewrite E. symmetry in E. apply beq_id_eq in E. subst. assumption.
+          ++ unfold override. rewrite E. apply H2.
+    + exists (Ø|[a |-> false]|). intros. destruct H0.
+      * split.
+        -- cbn. auto.
+        -- unfold override. subst. rewrite <- beq_id_refl. apply E1.
+      * inversion H0.     
+    + eexists (v''|[a |-> false]|). intros. remember (i :: l) as l'. cbn. remember (fun V : valuation => V |[ a |-> false ]|) as f. assert (f v'' = (v''|[a |-> false]|)) by (rewrite Heqf; reflexivity).
+     destruct H0.
+      * split.
+        -- apply in_app_iff. left. rewrite <- H1. apply in_map.  destruct (H i). rewrite Heql'. left. reflexivity. auto.
+        -- subst. unfold override. rewrite <- beq_id_refl. apply E1.
+      * apply H in H0. destruct H0. split.
+        -- apply in_app_iff. left. rewrite <- H1. apply in_map. assumption.
+        -- destruct (beq_id a x0) eqn:E.
+          ++ unfold override. rewrite E. symmetry in E. apply beq_id_eq in E. subst. assumption.
+          ++ unfold override. rewrite E. apply H2.
+Qed.
 
 Lemma satisfiable_helper : forall p, satisfiable p -> exists v, In v (allValuations (occuring_vars p)) /\ interp v p = true.
 Proof. intros. destruct H. Admitted.
