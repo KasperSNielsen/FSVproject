@@ -165,48 +165,69 @@ Proof. induction l; intros.
     + cbn. destruct (interp a p); eauto.
 Qed.
 
-Lemma helper : forall l (v: valuation), exists v', forall x0, In x0 l -> In v' (allValuations l) /\ v x0 = v' x0.
+Lemma helper : forall l (v: valuation), exists v', In v' (allValuations l) /\ forall x0, In x0 l ->  v x0 = v' x0.
 Proof. induction l; intros.
-  - exists Ø. intros. inversion H.
-  - destruct (IHl v) as [v'']. destruct (v a) eqn:E1, l. 
-    + exists (Ø|[a |-> true]|). intros. destruct H0.
-      * split.
-        -- cbn. auto.
-        -- unfold override. subst. rewrite <- beq_id_refl. apply E1.
-      * inversion H0. 
-    + eexists (v''|[a |-> true]|). intros. remember (i :: l) as l'. cbn. remember (fun V : valuation => V |[ a |-> true ]|) as f. assert (f v'' = (v''|[a |-> true]|)) by (rewrite Heqf; reflexivity).
-     destruct H0.
-      * split.
-        -- apply in_app_iff. right. rewrite <- H1. apply in_map. destruct (H i). rewrite Heql'. left. reflexivity. auto.
+  - exists Ø. split. left. reflexivity. intros. inversion H.
+  - destruct (IHl v) as [v'']. destruct H. destruct (v a) eqn:E1. 
+    + eexists (v''|[a |-> true]|). intros. cbn. remember (fun V : valuation => V |[ a |-> true ]|) as f. assert (f v'' = (v''|[a |-> true]|)) by (rewrite Heqf; reflexivity).
+       split.
+        * apply in_app_iff. right. rewrite <- H1. apply in_map.  auto.
+        * intros. destruct H2.
+          -- subst. unfold override. rewrite <- beq_id_refl. apply E1.
+          -- apply H0 in H2. destruct (beq_id a x0) eqn:E.
+            ++ unfold override. rewrite E. symmetry in E. apply beq_id_eq in E. subst. assumption.
+            ++ unfold override. rewrite E. apply H2.
+    + eexists (v''|[a |-> false]|). intros. cbn. remember (fun V : valuation => V |[ a |-> false ]|) as f. assert (f v'' = (v''|[a |-> false]|)) by (rewrite Heqf; reflexivity).
+    split.
+      * apply in_app_iff. left. rewrite <- H1. apply in_map.  auto.
+      * intros. destruct H2.
         -- subst. unfold override. rewrite <- beq_id_refl. apply E1.
-      * apply H in H0. destruct H0. split.
-        -- apply in_app_iff. right. rewrite <- H1. apply in_map. assumption.
-        -- destruct (beq_id a x0) eqn:E.
-          ++ unfold override. rewrite E. symmetry in E. apply beq_id_eq in E. subst. assumption.
-          ++ unfold override. rewrite E. apply H2.
-    + exists (Ø|[a |-> false]|). intros. destruct H0.
-      * split.
-        -- cbn. auto.
-        -- unfold override. subst. rewrite <- beq_id_refl. apply E1.
-      * inversion H0.     
-    + eexists (v''|[a |-> false]|). intros. remember (i :: l) as l'. cbn. remember (fun V : valuation => V |[ a |-> false ]|) as f. assert (f v'' = (v''|[a |-> false]|)) by (rewrite Heqf; reflexivity).
-     destruct H0.
-      * split.
-        -- apply in_app_iff. left. rewrite <- H1. apply in_map.  destruct (H i). rewrite Heql'. left. reflexivity. auto.
-        -- subst. unfold override. rewrite <- beq_id_refl. apply E1.
-      * apply H in H0. destruct H0. split.
-        -- apply in_app_iff. left. rewrite <- H1. apply in_map. assumption.
-        -- destruct (beq_id a x0) eqn:E.
+        -- apply H0 in H2. destruct (beq_id a x0) eqn:E.
           ++ unfold override. rewrite E. symmetry in E. apply beq_id_eq in E. subst. assumption.
           ++ unfold override. rewrite E. apply H2.
 Qed.
 
+Lemma in_set_add: forall x l, In x (set_add x l).
+Proof. intros. induction l. 
+  - cbn. left. reflexivity.
+  - cbn. destruct (beq_id a x0) eqn:E.
+    + symmetry in E. apply beq_id_eq in E. subst. left. reflexivity.
+    + cbn. right. auto.
+Qed.
+
+Lemma in_set_add': forall x a l, In x l -> In x (set_add a l).
+Proof. intros. induction l.
+      * inversion H.
+      * cbn. destruct (beq_id a0 a) eqn:E. auto. destruct H.
+        ++ subst. left. reflexivity.
+        ++ right. auto.
+Qed.
+
+Lemma in_set_union_l: forall x l1 l2, In x l1 -> In x (set_union l1 l2).
+Proof. intros. induction l1.
+  - inversion H.
+  - destruct H.
+    + subst. cbn. apply in_set_add.
+    + cbn. apply in_set_add'. auto. 
+Qed.
+
+Lemma in_set_union_r: forall x l1 l2, In x l2 -> In x (set_union l1 l2).
+Proof. intros. induction l1.
+  - cbn. auto.
+  - cbn. apply in_set_add'. auto. 
+Qed.
+    
 Lemma satisfiable_helper : forall p, satisfiable p -> exists v, In v (allValuations (occuring_vars p)) /\ interp v p = true.
-Proof. intros. destruct H. Admitted.
+Proof. intros. destruct H as [v]. destruct (helper (occuring_vars p) v) as [v']. destruct H0. exists v'.
+  split. auto. clear H0. rewrite <- H. clear H. induction p; cbn;
+  try reflexivity; try (rewrite <- H1; auto; left; auto);
+  try (rewrite IHp1, IHp2; try reflexivity; intros; apply H1; cbn; [ apply in_set_union_r |  apply in_set_union_l]; auto).
+  rewrite IHp. reflexivity. intros. auto.
+Qed.
 
 Lemma solver_complete : forall p, satisfiable p -> solver p = true.
 Proof. 
   intros. unfold solver, find_valuation. apply satisfiable_helper in H. destruct H. destruct H.
   pose proof (solver_complete_help (allValuations (occuring_vars p)) p x0 H0 H). 
   destruct H1. rewrite H1. reflexivity.
-Qed.
+Qed. 
