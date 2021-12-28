@@ -233,3 +233,124 @@ Proof.
   pose proof (solver_complete_help (allValuations (occuring_vars p)) p x0 H0 H). 
   destruct H1. rewrite H1. reflexivity.
 Qed. 
+
+Fixpoint negation_nf_1 p :=
+  match p with
+  | <{ p1 -> p2 }> => let p1 := (negation_nf_1 p1) in let p2 := (negation_nf_1 p2) in 
+    <{ ~ p1 \/ p2 }>
+  | <{ p1 /\ p2 }> => let p1 := (negation_nf_1 p1) in let p2 := (negation_nf_1 p2) in 
+    <{ p1 /\ p2 }>
+  | <{ p1 \/ p2 }> => let p1 := (negation_nf_1 p1) in let p2 := (negation_nf_1 p2) in 
+    <{ p1 \/ p2 }>
+  | <{ ~p1 }> => f_neg (negation_nf_1 p1)
+  | _ => p
+  end.
+
+Fixpoint negation_nf_2 p :=
+  match p with
+  | <{~ (p1 \/ p2) }> => let p1 := (negation_nf_1 p1) in let p2 := (negation_nf_1 p2) in 
+    <{ ~p1 /\ ~p2 }>
+  | <{~ (p1 /\ p2) }> => let p1 := (negation_nf_1 p1) in let p2 := (negation_nf_1 p2) in 
+    <{ ~p1 \/ ~p2 }>
+  | <{ p1 /\ p2 }> => let p1 := (negation_nf_2 p1) in let p2 := (negation_nf_2 p2) in 
+    <{ p1 /\ p2 }>
+  | <{ p1 \/ p2 }> => let p1 := (negation_nf_2 p1) in let p2 := (negation_nf_2 p2) in 
+    <{ p1 \/ p2 }>
+  | <{ ~p1 }> => f_neg (negation_nf_2 p1)
+  | _ => p
+  end.
+
+Fixpoint negation_nf_3 p :=
+  match p with
+  | <{ ~~p1 }> => negation_nf_3 p1
+  | <{ p1 /\ p2 }> => let p1 := (negation_nf_3 p1) in let p2 := (negation_nf_3 p2) in 
+    <{ p1 /\ p2 }>
+  | <{ p1 \/ p2 }> => let p1 := (negation_nf_3 p1) in let p2 := (negation_nf_3 p2) in 
+    <{ p1 \/ p2 }>
+  | <{ ~p1 }> => f_neg (negation_nf_3 p1)
+  | _ => p
+  end.
+
+Definition negation_nf p := 
+  let p1 := negation_nf_1 p in
+  let p2 := negation_nf_2 p1 in
+  negation_nf_3 p2.
+
+Compute negation_nf twotwotwo.
+
+Fixpoint verify_nnf p :=
+  match p with
+  | <{ p /\ q }> => (verify_nnf p) && (verify_nnf q)
+  | <{ p \/ q }> => (verify_nnf p) && (verify_nnf q)
+  | f_false | f_true | f_var _ | f_neg (f_var _)  => true
+  | _ => false
+  end.
+
+Definition verify_nnf_works p := verify_nnf (negation_nf p) = true.
+
+Fixpoint helper_left p q :=
+  match q with
+  | <{q1 /\ q2 }> => f_and (helper_left p q1) (helper_left p q2)
+  | _ => <{p \/ q}>
+  end.
+
+Fixpoint helper_right q p :=
+  match q with
+  | <{q1 /\ q2 }> => f_and (helper_right q1 p) (helper_right q2 p)
+  | _ => helper_left q p
+  end.
+
+Definition transf p := 
+  match p with
+  | <{p \/ q}> => helper_right p q
+  | _ => p
+  end.
+
+
+Fixpoint cnf s :=
+  match s with
+  | <{ p /\ q }> => f_and (cnf p) (cnf q)
+  | <{ p \/ q}> => transf (f_or (cnf p) (cnf q))
+  | _ => s
+  end.
+
+Definition cnf_conv p := 
+  let p1 := negation_nf p in
+  cnf p1.
+
+Definition x1 := Id 3 .
+
+Fixpoint verify_cnf' s (seenor : bool) :=
+  match s with
+  | <{ p /\ q }> => if seenor then false else (verify_cnf' p false) && (verify_cnf' q false)
+  | <{ p \/ q }> => (verify_cnf' p true) && (verify_cnf' q true)
+  | f_false | f_true | f_var _ | f_neg (f_var _)  => true
+  | _ => false
+  end.
+
+Definition verify_cnf s := verify_cnf' s false.
+
+
+Definition test11 := <{ x \/ (y /\ z /\ x1 ) }> .
+Definition test12 := <{ x \/ (y \/ z /\ x1 ) }> .
+Definition test13 := <{ (x /\ ((y \/ x) /\ z)) \/ (y /\ (x \/ ( y /\ z))) }> .
+
+
+Compute verify_cnf (cnf_conv test13).
+
+Conjecture cnf_works : forall p, verify_cnf (cnf_conv p) = true.
+
+
+Require Import Lia.
+
+Conjecture cnf_sat : forall p v, interp v p = interp v (cnf_conv p).
+
+From QuickChick Require Import QuickChick.
+
+Derive Arbitrary for id.
+Derive Arbitrary for form.
+Derive Show for id.
+Derive Show for form.
+
+
+QuickChick cnf_works.
