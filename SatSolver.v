@@ -246,20 +246,25 @@ Fixpoint negation_nf_1 p :=
   | _ => p
   end.
 
+Fixpoint de_morg p :=
+  match p with
+  | <{(p1 \/ p2) }> => f_and (de_morg p1) (de_morg p2)  
+  | <{(p1 /\ p2) }> => f_or (de_morg p1) (de_morg p2) 
+  | f_neg p1 => p1
+  | _ => f_neg p
+  end.
+
+
 Fixpoint negation_nf_2 p :=
   match p with
-  | <{~ (p1 \/ p2) }> => let p1 := (negation_nf_1 p1) in let p2 := (negation_nf_1 p2) in 
-    <{ ~p1 /\ ~p2 }>
-  | <{~ (p1 /\ p2) }> => let p1 := (negation_nf_1 p1) in let p2 := (negation_nf_1 p2) in 
-    <{ ~p1 \/ ~p2 }>
+  | <{ ~p1 }> => let p1 := negation_nf_2 p1 in de_morg p1
   | <{ p1 /\ p2 }> => let p1 := (negation_nf_2 p1) in let p2 := (negation_nf_2 p2) in 
     <{ p1 /\ p2 }>
   | <{ p1 \/ p2 }> => let p1 := (negation_nf_2 p1) in let p2 := (negation_nf_2 p2) in 
     <{ p1 \/ p2 }>
-  | <{ ~p1 }> => f_neg (negation_nf_2 p1)
   | _ => p
   end.
-
+(*
 Fixpoint negation_nf_3 p :=
   match p with
   | <{ ~~p1 }> => negation_nf_3 p1
@@ -270,11 +275,10 @@ Fixpoint negation_nf_3 p :=
   | <{ ~p1 }> => f_neg (negation_nf_3 p1)
   | _ => p
   end.
-
+*)
 Definition negation_nf p := 
   let p1 := negation_nf_1 p in
-  let p2 := negation_nf_2 p1 in
-  negation_nf_3 p2.
+  negation_nf_2 p1.
 
 Compute negation_nf twotwotwo.
 
