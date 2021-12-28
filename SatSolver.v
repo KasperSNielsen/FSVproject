@@ -328,7 +328,8 @@ Fixpoint verify_cnf' s (seenor : bool) :=
   match s with
   | <{ p /\ q }> => if seenor then false else (verify_cnf' p false) && (verify_cnf' q false)
   | <{ p \/ q }> => (verify_cnf' p true) && (verify_cnf' q true)
-  | f_false | f_true | f_var _ | f_neg (f_var _)  => true
+  | f_false | f_true | f_var _ => true
+  | f_neg (f_var _) | f_neg (f_false) | f_neg (f_true)  => true
   | _ => false
   end.
 
@@ -345,9 +346,7 @@ Compute verify_cnf (cnf_conv test13).
 Conjecture cnf_works : forall p, verify_cnf (cnf_conv p) = true.
 
 
-Require Import Lia.
-
-Conjecture cnf_sat : forall p v, interp v p = interp v (cnf_conv p).
+Conjecture cnf_sat : forall p, solver p = solver (cnf_conv p).
 
 From QuickChick Require Import QuickChick.
 
@@ -358,3 +357,4 @@ Derive Show for form.
 
 
 QuickChick cnf_works.
+QuickChick cnf_sat.
