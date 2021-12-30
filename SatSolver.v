@@ -42,6 +42,7 @@ Definition empty_valuation : valuation := fun x => false .
 Definition override (V : valuation ) (x : id) (b : bool ) : valuation :=
   fun y => if beq_id x y then b else V y.
 
+(* Exercise 2.3 *)
 Fixpoint interp (V : valuation) (p : form ) : bool :=
   match p with
   | f_true => true
@@ -69,6 +70,7 @@ Proof. reflexivity. Qed.
 
 Definition satisfiable (p : form ) : Prop := exists V : valuation , interp V p = true .
 
+(* Exercise 2.4 *)
 Lemma test1 : satisfiable twotwoone .
 Proof. 
   unfold satisfiable, twotwoone. exists Ø. reflexivity.
@@ -79,18 +81,25 @@ Proof.
   unfold satisfiable, twotwotwo. exists (Ø|[ x |-> true]|). reflexivity.
 Qed.
 
+(* Helper function to add an element to a list, only if the element
+   is not already present within the list 
+*)
 Fixpoint set_add (x : id) (l : list id) :=
   match l with
   | nil => [x]
   | a :: l' => if beq_id a x then l else a :: (set_add x l')
   end.
 
+(* Computes the union of two lists as if they were sets, 
+   i.e. disallowing duplicate entries
+*)
 Fixpoint set_union (l1 l2 : list id) : list id :=
   match l1 with
   | nil => l2
   | x :: l' => set_add x (set_union l' l2)
   end.
 
+(* Computes the list of id's present in a given formular p *)
 Fixpoint occuring_vars (p : form) : list id :=
   match p with
   | f_true => nil
@@ -102,6 +111,7 @@ Fixpoint occuring_vars (p : form) : list id :=
   | <{ x -> y }> => set_union (occuring_vars x) (occuring_vars y)
   end.
 
+(* Expected: [Id 1; Id 0] *)
 Compute occuring_vars twotwoone.
 
 Print map.
@@ -174,17 +184,18 @@ Proof. induction l; intros.
         * apply in_app_iff. right. rewrite <- H1. apply in_map. auto.
         * intros. destruct H2.
           -- subst. unfold override. rewrite <- beq_id_refl. apply E1.
-          -- apply H0 in H2. destruct (beq_id a x0) eqn:E.
-            ++ unfold override. rewrite E. symmetry in E. apply beq_id_eq in E. subst. assumption.
-            ++ unfold override. rewrite E. apply H2.
+          -- apply H0 in H2. destruct (beq_id a x0) eqn:E; 
+            unfold override; rewrite E.
+            ++ symmetry in E. apply beq_id_eq in E. subst. assumption.
+            ++ unfold override. apply H2.
     + exists (v'|[a |-> false]|). cbn. remember (fun V : valuation => V |[ a |-> false ]|) as f. assert (f v' = (v'|[a |-> false]|)) by (rewrite Heqf; reflexivity).
     split.
       * apply in_app_iff. left. rewrite <- H1. apply in_map.  auto.
       * intros. destruct H2.
         -- subst. unfold override. rewrite <- beq_id_refl. apply E1.
-        -- apply H0 in H2. destruct (beq_id a x0) eqn:E.
-          ++ unfold override. rewrite E. symmetry in E. apply beq_id_eq in E. subst. assumption.
-          ++ unfold override. rewrite E. apply H2.
+        -- apply H0 in H2. destruct (beq_id a x0) eqn:E; unfold override; rewrite E. 
+          ++ symmetry in E. apply beq_id_eq in E. subst. assumption.
+          ++ apply H2.
 Qed.
 
 Lemma in_set_add: forall x l, In x (set_add x l).
