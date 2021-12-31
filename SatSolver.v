@@ -175,7 +175,7 @@ Proof. induction l; intros.
     + cbn. destruct (interp a p); eauto.
 Qed.
 
-Lemma helper : forall l (v: valuation), exists v', In v' (allValuations l) /\ forall x0, In x0 l ->  v x0 = v' x0.
+Lemma val_in_allvals : forall l (v: valuation), exists v', In v' (allValuations l) /\ forall x0, In x0 l ->  v x0 = v' x0.
 Proof. induction l; intros.
   - exists Ø. split. left. reflexivity. intros. inversion H.
   - destruct (IHl v) as [v']. destruct H. destruct (v a) eqn:E1. 
@@ -229,7 +229,7 @@ Proof. intros. induction l1.
 Qed.
     
 Lemma satisfiable_helper : forall p, satisfiable p -> exists v, In v (allValuations (occuring_vars p)) /\ interp v p = true.
-Proof. intros. destruct H as [v]. destruct (helper (occuring_vars p) v) as [v']. destruct H0. exists v'.
+Proof. intros. destruct H as [v]. destruct (val_in_allvals (occuring_vars p) v) as [v']. destruct H0. exists v'.
   split.
     - apply H0.
     - clear H0. rewrite <- H. clear H. induction p; cbn;
@@ -245,14 +245,12 @@ Proof.
   destruct H1. rewrite H1. reflexivity.
 Qed. 
 
+(* Transforms (p1 -> p2) into (~p1 \/ p2) *)
 Fixpoint negation_nf_1 p :=
   match p with
-  | <{ p1 -> p2 }> => let p1 := (negation_nf_1 p1) in let p2 := (negation_nf_1 p2) in 
-    <{ ~ p1 \/ p2 }>
-  | <{ p1 /\ p2 }> => let p1 := (negation_nf_1 p1) in let p2 := (negation_nf_1 p2) in 
-    <{ p1 /\ p2 }>
-  | <{ p1 \/ p2 }> => let p1 := (negation_nf_1 p1) in let p2 := (negation_nf_1 p2) in 
-    <{ p1 \/ p2 }>
+  | <{ p1 -> p2 }> => f_or (f_neg (negation_nf_1 p1)) (negation_nf_1 p2) 
+  | <{ p1 /\ p2 }> => f_and (negation_nf_1 p1) (negation_nf_1 p2) 
+  | <{ p1 \/ p2 }> => f_or (negation_nf_1 p1) (negation_nf_1 p2) 
   | <{ ~p1 }> => f_neg (negation_nf_1 p1)
   | _ => p
   end.
@@ -268,64 +266,39 @@ Fixpoint de_morg p :=
 
 Fixpoint negation_nf_2 p :=
   match p with
-  | <{ ~p1 }> => let p1 := negation_nf_2 p1 in de_morg p1
-  | <{ p1 /\ p2 }> => let p1 := (negation_nf_2 p1) in let p2 := (negation_nf_2 p2) in 
-    <{ p1 /\ p2 }>
-  | <{ p1 \/ p2 }> => let p1 := (negation_nf_2 p1) in let p2 := (negation_nf_2 p2) in 
-    <{ p1 \/ p2 }>
+  | <{ ~p1 }> => de_morg (negation_nf_2 p1)
+  | <{ p1 /\ p2 }> => f_and (negation_nf_2 p1) (negation_nf_2 p2) 
+  | <{ p1 \/ p2 }> => f_or (negation_nf_2 p1) (negation_nf_2 p2) 
   | _ => p
   end.
-(*
-Fixpoint negation_nf_3 p :=
-  match p with
-  | <{ ~~p1 }> => negation_nf_3 p1
-  | <{ p1 /\ p2 }> => let p1 := (negation_nf_3 p1) in let p2 := (negation_nf_3 p2) in 
-    <{ p1 /\ p2 }>
-  | <{ p1 \/ p2 }> => let p1 := (negation_nf_3 p1) in let p2 := (negation_nf_3 p2) in 
-    <{ p1 \/ p2 }>
-  | <{ ~p1 }> => f_neg (negation_nf_3 p1)
-  | _ => p
-  end.
-*)
+
 Definition negation_nf p := 
   let p1 := negation_nf_1 p in
   negation_nf_2 p1.
 
-Compute negation_nf twotwotwo.
-
-Fixpoint verify_nnf p :=
-  match p with
-  | <{ p /\ q }> => (verify_nnf p) && (verify_nnf q)
-  | <{ p \/ q }> => (verify_nnf p) && (verify_nnf q)
-  | f_false | f_true | f_var _ | f_neg (f_var _)  => true
-  | _ => false
-  end.
-
-Definition verify_nnf_works p := verify_nnf (negation_nf p) = true.
-
-Fixpoint helper_left p q :=
+Fixpoint distr_left p q :=
   match q with
-  | <{q1 /\ q2 }> => f_and (helper_left p q1) (helper_left p q2)
+  | <{q1 /\ q2 }> => f_and (distr_left p q1) (distr_left p q2)
   | _ => <{p \/ q}>
   end.
 
-Fixpoint helper_right q p :=
+Fixpoint distr_right q p :=
   match q with
-  | <{q1 /\ q2 }> => f_and (helper_right q1 p) (helper_right q2 p)
-  | _ => helper_left q p
+  | <{q1 /\ q2 }> => f_and (distr_right q1 p) (distr_right q2 p)
+  | _ => distr_left q p
   end.
 
-Definition transf p := 
+Definition distribute p := 
   match p with
-  | <{p \/ q}> => helper_right p q
+  | <{p \/ q}> => distr_right p q
   | _ => p
   end.
 
-
+(* Assuming s is on negation normal form, turns it into cnf *)
 Fixpoint cnf s :=
   match s with
   | <{ p /\ q }> => f_and (cnf p) (cnf q)
-  | <{ p \/ q}> => transf (f_or (cnf p) (cnf q))
+  | <{ p \/ q}> => distribute (f_or (cnf p) (cnf q))
   | _ => s
   end.
 
@@ -333,30 +306,21 @@ Definition cnf_conv p :=
   let p1 := negation_nf p in
   cnf p1.
 
-Definition x1 := Id 3 .
-
-Fixpoint verify_cnf' s (seenor : bool) :=
+Fixpoint verify_cnf_aux s (seenor : bool) :=
   match s with
-  | <{ p /\ q }> => if seenor then false else (verify_cnf' p false) && (verify_cnf' q false)
-  | <{ p \/ q }> => (verify_cnf' p true) && (verify_cnf' q true)
+  | <{ p /\ q }> => if seenor then false else (verify_cnf_aux p false) && (verify_cnf_aux q false)
+  | <{ p \/ q }> => (verify_cnf_aux p true) && (verify_cnf_aux q true)
   | f_false | f_true | f_var _ => true
   | f_neg (f_var _) | f_neg (f_false) | f_neg (f_true)  => true
   | _ => false
   end.
 
-Definition verify_cnf s := verify_cnf' s false.
+Definition verify_cnf s := verify_cnf_aux s false.
 
-
-Definition test11 := <{ x \/ (y /\ z /\ x1 ) }> .
-Definition test12 := <{ x \/ (y \/ z /\ x1 ) }> .
-Definition test13 := <{ (x /\ ((y \/ x) /\ z)) \/ (y /\ (x \/ ( y /\ z))) }> .
-
-
-Compute verify_cnf (cnf_conv test13).
-
+(* Check that cnf_conv actually is an cnf *)
 Conjecture cnf_works : forall p, verify_cnf (cnf_conv p) = true.
 
-
+(* Check that the semantics of cnf_conv is preserved *)
 Conjecture cnf_sat : forall p, solver p = solver (cnf_conv p).
 
 From QuickChick Require Import QuickChick.
