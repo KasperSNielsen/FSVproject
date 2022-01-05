@@ -57,6 +57,7 @@ Fixpoint interp (V : valuation) (p : form ) : bool :=
 Notation "'Ø'" := empty_valuation.
 Notation "m '|[' x '|->' v ']|'" := (override m x v)  (at level 100, v at next level, right associativity).
 
+(* A test valuation, assigning  x = false, y = true, z = true using the custom notation*)
 Definition testval := Ø|[x |-> false]||[y |-> true]||[z |-> true]|.
 
 Example interp_test1 : interp testval twotwoone = false. 
@@ -68,7 +69,8 @@ Proof. reflexivity. Qed.
 Example interp_test3 : interp testval twotwothree = false. 
 Proof. reflexivity. Qed.
 
-Definition satisfiable (p : form ) : Prop := exists V : valuation , interp V p = true .
+(* Satisfiability states that there exists some valuation, making the interpretation of the formular true *)
+Definition satisfiable (p : form ) : Prop := exists V : valuation , interp V p = true.
 
 (* Exercise 2.4 *)
 Lemma test1 : satisfiable twotwoone .
