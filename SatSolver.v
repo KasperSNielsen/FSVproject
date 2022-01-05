@@ -116,14 +116,13 @@ Fixpoint occuring_vars (p : form) : list id :=
 (* Expected: [Id 1; Id 0] *)
 Compute occuring_vars twotwoone.
 
-Print map.
-
 Fixpoint allValuations (l : list id) : list valuation :=
   match l with
   | nil => [empty_valuation]
   | x :: l' => let lv := allValuations l' in (map (fun V => override V x false) lv) ++ (map (fun V => override V x true) lv) 
   end.
 
+(* Expecting length 4, since 2 variables both with mappings to true/false *)
 Compute length (allValuations (occuring_vars twotwoone)).
 
 Fixpoint find_valuation_helper (p : form) (l : list valuation) : option valuation :=
@@ -144,7 +143,14 @@ Definition solver (p : form ) : bool :=
   | None => false
   end.
 
-  (* Explained *)
+(* Exercse 2.6
+
+   Satisfiable is a definition, stating that there exists some valuation in which the formular is true.
+   It requires you to provide a witness, namely a valuation in which the formular's interpretation is true.
+
+   Solver is a function which returns true / false, depending on whether or not the formular is satisfiable,
+   enumerating all possible valuations to find one.
+*)
 
 Example two7pos1 : solver twotwoone = true.
 Proof. reflexivity. Qed.
@@ -319,7 +325,6 @@ Fixpoint verify_cnf_aux s (seenor : bool) :=
 
 Definition verify_cnf s := verify_cnf_aux s false.
 
-(* Check that cnf_conv actually is an cnf *)
 Conjecture cnf_works : forall p, verify_cnf (cnf_conv p) = true.
 
 (* Check that the semantics of cnf_conv is preserved *)
