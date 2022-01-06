@@ -113,9 +113,10 @@ Fixpoint occuring_vars (p : form) : list id :=
   | <{ x -> y }> => set_union (occuring_vars x) (occuring_vars y)
   end.
 
-(* Expected: [Id 1; Id 0] *)
-Compute occuring_vars twotwoone.
+Example test_occuring_vars :occuring_vars twotwoone = [Id 1; Id 0]. 
+Proof. reflexivity. Qed.
 
+(* Computes a list of all possible valuations, given a list id possible id's *)
 Fixpoint allValuations (l : list id) : list valuation :=
   match l with
   | nil => [empty_valuation]
@@ -123,7 +124,8 @@ Fixpoint allValuations (l : list id) : list valuation :=
   end.
 
 (* Expecting length 4, since 2 variables both with mappings to true/false *)
-Compute length (allValuations (occuring_vars twotwoone)).
+Example test_length_of_allValuations : length (allValuations (occuring_vars twotwoone)) = 4.
+Proof. reflexivity. Qed.
 
 Fixpoint find_valuation_helper (p : form) (l : list valuation) : option valuation :=
   match l with
@@ -134,9 +136,6 @@ Fixpoint find_valuation_helper (p : form) (l : list valuation) : option valuatio
 (* A comment to test git stupidity *)
 Definition find_valuation (p : form ) : option valuation :=
   find_valuation_helper p (allValuations (occuring_vars p)).
-
-Compute find_valuation twotwoone.
-Compute find_valuation twotwothree.
 
 Definition solver (p : form ) : bool :=
   match find_valuation p with
@@ -152,6 +151,8 @@ Definition solver (p : form ) : bool :=
    Solver is a function which returns true / false, depending on whether or not the formula is satisfiable,
    enumerating all possible valuations to find one.
 *)
+
+(* Exercise 2.7 *)
 
 Example two7pos1 : solver twotwoone = true.
 Proof. reflexivity. Qed.
@@ -172,17 +173,12 @@ Proof. intros l. induction l; intros.
   - cbn in H. destruct (interp a p) eqn:E. inversion H. subst. auto. apply (IHl _ _ H).
 Qed.
 
+(* Exercise 2.8
+   The proof that the solver is sound. Uses a helper function defined above to do so.
+*)
 Lemma solver_sound : forall p, solver p = true -> satisfiable p.
 Proof. intros. unfold satisfiable. unfold solver in H. destruct (find_valuation p) eqn:E; try easy. exists v.
   unfold find_valuation in E. apply solver_sound_helper in E. auto.
-Qed.
-
-Lemma solver_complete_help : forall l p v, interp v p = true -> In v l -> exists v', find_valuation_helper p l = Some v'.
-Proof. induction l; intros.
-  - easy.
-  - destruct H0.
-    + subst. exists v. cbn. rewrite H. reflexivity.
-    + cbn. destruct (interp a p); eauto.
 Qed.
 
 Lemma val_in_allvals : forall l (v: valuation), exists v', In v' (allValuations l) /\ forall x0, In x0 l ->  v x0 = v' x0.
@@ -248,6 +244,14 @@ Proof. intros. destruct H as [v]. destruct (val_in_allvals (occuring_vars p) v) 
       try reflexivity; try (rewrite <- H1; auto; left; auto);
       try (rewrite IHp1, IHp2; try reflexivity; intros; apply H1; cbn; [ apply in_set_union_r |  apply in_set_union_l]; auto);
       (rewrite IHp; auto).
+Qed.
+
+Lemma solver_complete_help : forall l p v, interp v p = true -> In v l -> exists v', find_valuation_helper p l = Some v'.
+Proof. induction l; intros.
+  - easy.
+  - destruct H0.
+    + subst. exists v. cbn. rewrite H. reflexivity.
+    + cbn. destruct (interp a p); eauto.
 Qed.
 
 Lemma solver_complete : forall p, satisfiable p -> solver p = true.
