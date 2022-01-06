@@ -145,10 +145,10 @@ Definition solver (p : form ) : bool :=
 
 (* Exercse 2.6
 
-   Satisfiable is a definition, stating that there exists some valuation in which the formular is true.
-   It requires you to provide a witness, namely a valuation in which the formular's interpretation is true.
+   Satisfiable is a definition, stating that there exists some valuation in which the formula is true.
+   It requires you to provide a witness, namely a valuation in which the formula's interpretation is true.
 
-   Solver is a function which returns true / false, depending on whether or not the formular is satisfiable,
+   Solver is a function which returns true / false, depending on whether or not the formula is satisfiable,
    enumerating all possible valuations to find one.
 *)
 
@@ -173,6 +173,14 @@ Qed.
 Lemma solver_sound : forall p, solver p = true -> satisfiable p.
 Proof. intros. unfold satisfiable. unfold solver in H. destruct (find_valuation p) eqn:E; try easy. exists v.
   unfold find_valuation in E. apply solver_sound_helper in E. auto.
+Qed.
+
+Lemma solver_complete_help : forall l p v, interp v p = true -> In v l -> exists v', find_valuation_helper p l = Some v'.
+Proof. induction l; intros.
+  - easy.
+  - destruct H0.
+    + subst. exists v. cbn. rewrite H. reflexivity.
+    + cbn. destruct (interp a p); eauto.
 Qed.
 
 Lemma val_in_allvals : forall l (v: valuation), exists v', In v' (allValuations l) /\ forall x0, In x0 l ->  v x0 = v' x0.
@@ -236,14 +244,6 @@ Proof. intros. destruct H as [v]. destruct (val_in_allvals (occuring_vars p) v) 
       try reflexivity; try (rewrite <- H1; auto; left; auto);
       try (rewrite IHp1, IHp2; try reflexivity; intros; apply H1; cbn; [ apply in_set_union_r |  apply in_set_union_l]; auto);
       (rewrite IHp; auto).
-Qed.
-
-Lemma solver_complete_help : forall l p v, interp v p = true -> In v l -> exists v', find_valuation_helper p l = Some v'.
-Proof. induction l; intros.
-  - easy.
-  - destruct H0.
-    + subst. exists v. cbn. rewrite H. reflexivity.
-    + cbn. destruct (interp a p); eauto.
 Qed.
 
 Lemma solver_complete : forall p, satisfiable p -> solver p = true.
