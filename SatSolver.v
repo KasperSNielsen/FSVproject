@@ -263,7 +263,7 @@ Fixpoint negation_nf_1 p :=
   | _ => p
   end.
 
-(* De Morgan's Law, transforming ~(p1 \/ p2) into (~p1) /\ (~p2) 
+(* De Morgan's Law, transforming ~(p1 \/ p2) into (~p1) /\ (~p2) and ~(p1 /\ p2) into (~p1) \/ (~p2)
    Note. This is only called on negations, so whenever (p1 \/ p2) is encountered, this is actually
    ~(p1 \/ p2). Therefore, if ~p1 is seen this actually means ~~p1 which is why p1 is returned (double neg elim).
 *)
