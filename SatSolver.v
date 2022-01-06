@@ -133,7 +133,6 @@ Fixpoint find_valuation_helper (p : form) (l : list valuation) : option valuatio
   | v :: l' => if interp v p then Some v else find_valuation_helper p l'
   end.
 
-(* A comment to test git stupidity *)
 Definition find_valuation (p : form ) : option valuation :=
   find_valuation_helper p (allValuations (occuring_vars p)).
 
@@ -160,7 +159,6 @@ Proof. reflexivity. Qed.
 Example two7pos2 : solver twotwotwo = true.
 Proof. reflexivity. Qed.
 
-(* A comment to test git stupidity *)
 Example two7neg1 : solver twotwothree = false.
 Proof. reflexivity. Qed.
 
@@ -181,6 +179,9 @@ Proof. intros. unfold satisfiable. unfold solver in H. destruct (find_valuation 
   unfold find_valuation in E. apply solver_sound_helper in E. auto.
 Qed.
 
+(* Helper lemma stating that an equivalent valuation exists in the list of allValuations, 
+   for all possible valuations over the id's in said valuation 
+*)
 Lemma val_in_allvals : forall l (v: valuation), exists v', In v' (allValuations l) /\ forall x0, In x0 l ->  v x0 = v' x0.
 Proof. induction l; intros.
   - exists Ø. split. left. reflexivity. intros. inversion H.
@@ -204,7 +205,7 @@ Proof. induction l; intros.
           ++ apply H2.
 Qed.
 
-(* A comment to test git stupidity *)
+(* Following couple of functions are helper functions for performing set operations on lists. *)
 Lemma in_set_add: forall x l, In x (set_add x l).
 Proof. intros. induction l. 
   - cbn. left. reflexivity.
@@ -235,7 +236,7 @@ Proof. intros. induction l1.
   - cbn. apply in_set_add'. auto. 
 Qed.
     
-(* A comment to test git stupidity *)
+(* If a formula is satisfiable then a valuation exists over the occuring vars which interpretation is true *)
 Lemma satisfiable_helper : forall p, satisfiable p -> exists v, In v (allValuations (occuring_vars p)) /\ interp v p = true.
 Proof. intros. destruct H as [v]. destruct (val_in_allvals (occuring_vars p) v) as [v']. destruct H0. exists v'.
   split.
@@ -254,6 +255,7 @@ Proof. induction l; intros.
     + cbn. destruct (interp a p); eauto.
 Qed.
 
+(* Exercise 2.9. Proof of completeness of the solver. *)
 Lemma solver_complete : forall p, satisfiable p -> solver p = true.
 Proof. 
   intros. unfold solver, find_valuation. apply satisfiable_helper in H. destruct H. destruct H.
@@ -283,7 +285,7 @@ Fixpoint de_morg p :=
   | _ => f_neg p
   end.
 
-
+(* Applies De Morgan's Law + double negation elimination to a formula which is assumed to have no implications *)
 Fixpoint negation_nf_2 p :=
   match p with
   | <{ ~p1 }> => de_morg (negation_nf_2 p1)
@@ -292,6 +294,7 @@ Fixpoint negation_nf_2 p :=
   | _ => p
   end.
 
+(* Converts an arbitrary formula into an equivalent one on NNF *)
 Definition negation_nf p := 
   let p1 := negation_nf_1 p in
   negation_nf_2 p1.
@@ -308,6 +311,7 @@ Fixpoint distr_right q p :=
   | _ => distr_left q p
   end.
 
+(* Distributes Disjunctions from left and right *)
 Definition distribute p := 
   match p with
   | <{p \/ q}> => distr_right p q
@@ -322,6 +326,7 @@ Fixpoint cnf s :=
   | _ => s
   end.
 
+(* Converts a boolean formula to CNF *)
 Definition cnf_conv p := 
   let p1 := negation_nf p in
   cnf p1.
@@ -335,6 +340,7 @@ Fixpoint verify_cnf_aux s (seenor : bool) :=
   | _ => false
   end.
 
+(* Verifies that a formula is on CNF - uses helper function to ensure no more conjunctions are seen after the first disjunction*)
 Definition verify_cnf s := verify_cnf_aux s false.
 
 Conjecture cnf_works : forall p, verify_cnf (cnf_conv p) = true.
@@ -344,6 +350,7 @@ Conjecture cnf_sat : forall p, solver p = solver (cnf_conv p).
 
 From QuickChick Require Import QuickChick.
 
+(* Derivies arbitrary for required parts, and executes QuickChick on the defined Conjectures. *)
 Derive Arbitrary for id.
 Derive Arbitrary for form.
 Derive Show for id.
