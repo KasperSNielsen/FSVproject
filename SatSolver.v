@@ -131,6 +131,7 @@ Fixpoint find_valuation_helper (p : form) (l : list valuation) : option valuatio
   | v :: l' => if interp v p then Some v else find_valuation_helper p l'
   end.
 
+(* A comment to test git stupidity *)
 Definition find_valuation (p : form ) : option valuation :=
   find_valuation_helper p (allValuations (occuring_vars p)).
 
@@ -158,6 +159,7 @@ Proof. reflexivity. Qed.
 Example two7pos2 : solver twotwotwo = true.
 Proof. reflexivity. Qed.
 
+(* A comment to test git stupidity *)
 Example two7neg1 : solver twotwothree = false.
 Proof. reflexivity. Qed.
 
@@ -206,6 +208,7 @@ Proof. induction l; intros.
           ++ apply H2.
 Qed.
 
+(* A comment to test git stupidity *)
 Lemma in_set_add: forall x l, In x (set_add x l).
 Proof. intros. induction l. 
   - cbn. left. reflexivity.
@@ -236,6 +239,7 @@ Proof. intros. induction l1.
   - cbn. apply in_set_add'. auto. 
 Qed.
     
+(* A comment to test git stupidity *)
 Lemma satisfiable_helper : forall p, satisfiable p -> exists v, In v (allValuations (occuring_vars p)) /\ interp v p = true.
 Proof. intros. destruct H as [v]. destruct (val_in_allvals (occuring_vars p) v) as [v']. destruct H0. exists v'.
   split.
